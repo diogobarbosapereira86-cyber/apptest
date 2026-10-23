@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0B0F14">
   <title>Conteúdo para o seu Instagram</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
@@ -28,11 +29,12 @@
       </form>
     </section>
 
-    <!-- Cadastro do negócio -->
+    <!-- Cadastro, passo 1: dados básicos, arquivos e autorização -->
     <section id="tela-cadastro" hidden>
-      <h1>Conte um pouco sobre o seu negócio</h1>
-      <p class="lead">Com essas respostas, a ferramenta cria posts com a cara do seu negócio. Leva uns 3 minutos e você pode mudar depois.</p>
-      <form id="form-perfil" class="formulario">
+      <span class="etiqueta">Passo 1 de 2</span>
+      <h1>Conte sobre o seu negócio</h1>
+      <p class="lead">Mande o seu cardápio, o Instagram e o site. A ferramenta lê tudo e já preenche o cadastro para você conferir.</p>
+      <form id="form-inicio" class="formulario">
         <div class="campo">
           <label for="nome">Nome do negócio</label>
           <input id="nome" name="nome" required maxlength="120" placeholder="Ex.: Cantinho da Vó Maria">
@@ -64,9 +66,63 @@
           <input id="cidade" name="cidade" required maxlength="120" placeholder="Ex.: Vila Mariana, São Paulo">
         </div>
         <div class="campo">
-          <label for="produtos">O que você vende? Coloque os principais itens e preços</label>
-          <textarea id="produtos" name="produtos" required rows="5" maxlength="1500" placeholder="Ex.: Feijoada completa R$ 39,90 (só sábado). Prato feito R$ 24,90. Marmita P R$ 18. Suco natural R$ 8."></textarea>
-          <small>Pode colar o seu cardápio aqui. Quanto mais detalhe, melhores os posts.</small>
+          <label for="instagram">Seu @ no Instagram <span class="opcional">(opcional)</span></label>
+          <input id="instagram" name="instagram" maxlength="80" placeholder="Ex.: @cantinhodavomaria" autocapitalize="off">
+        </div>
+        <div class="campo">
+          <label for="site">Seu site <span class="opcional">(opcional)</span></label>
+          <input id="site" name="site" maxlength="200" placeholder="Ex.: cantinhodavomaria.com.br" autocapitalize="off" inputmode="url">
+        </div>
+
+        <div class="campo">
+          <span class="rotulo">Seu cardápio <span class="opcional">(opcional)</span></span>
+          <label class="envio" for="arquivo-cardapio">
+            <span class="envio-titulo" id="cardapio-nome">Enviar foto ou PDF do cardápio</span>
+            <span class="envio-ajuda">Pode ser foto tirada com o celular. Até 8 MB.</span>
+          </label>
+          <input class="oculto" id="arquivo-cardapio" type="file" accept="image/*,application/pdf">
+        </div>
+
+        <div class="campo">
+          <span class="rotulo">Fotos do seu negócio <span class="opcional">(opcional, até 8 agora)</span></span>
+          <label class="envio" for="arquivo-fotos">
+            <span class="envio-titulo">Enviar fotos dos pratos, do espaço e da equipe</span>
+            <span class="envio-ajuda">Elas serão usadas para montar as artes dos posts. Dá para mandar mais depois.</span>
+          </label>
+          <input class="oculto" id="arquivo-fotos" type="file" accept="image/*" multiple>
+          <div class="miniaturas" id="miniaturas-cadastro"></div>
+        </div>
+
+        <div class="autorizacao">
+          <label class="feito" for="autorizo">
+            <input type="checkbox" id="autorizo" name="autorizo" required>
+            <span>Autorizo o uso das informações, do cardápio e das fotos que enviei para analisar o meu negócio e criar conteúdo para o meu Instagram, agora e nas próximas vezes que eu usar a ferramenta.</span>
+          </label>
+          <p class="nota">Os arquivos vão para a IA só para gerar o conteúdo. As fotos ficam guardadas neste aparelho, e você pode apagar tudo quando quiser em “Meu negócio”.</p>
+        </div>
+
+        <div class="carregando" id="carregando-analise" hidden>
+          <span class="roda" aria-hidden="true"></span>
+          <p>Lendo o cardápio, o site e as fotos. Leva de 30 segundos a 2 minutos.</p>
+        </div>
+
+        <div class="botoes">
+          <button class="botao grande" type="submit" id="botao-analisar">Analisar meu negócio</button>
+          <button class="botao secundario" type="button" id="botao-pular">Pular e preencher à mão</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Cadastro, passo 2: conferir o que a análise encontrou -->
+    <section id="tela-conferir" hidden>
+      <span class="etiqueta">Passo 2 de 2</span>
+      <h1>Confira os dados</h1>
+      <div id="resultado-analise"></div>
+      <form id="form-perfil" class="formulario">
+        <div class="campo">
+          <label for="produtos">O que você vende? Principais itens e preços</label>
+          <textarea id="produtos" name="produtos" required rows="7" maxlength="4000" placeholder="Ex.: Feijoada completa R$ 39,90 (só sábado). Prato feito R$ 24,90. Marmita P R$ 18."></textarea>
+          <small>Confira os preços. Quanto mais detalhe, melhores os posts.</small>
         </div>
         <div class="campo">
           <label for="publico">Quem são os seus clientes?</label>
@@ -74,11 +130,11 @@
         </div>
         <div class="campo">
           <label for="diferenciais">O que o seu negócio tem de especial? <span class="opcional">(opcional)</span></label>
-          <input id="diferenciais" name="diferenciais" maxlength="300" placeholder="Ex.: receita de família, tudo feito na hora, ambiente com música ao vivo">
+          <input id="diferenciais" name="diferenciais" maxlength="300" placeholder="Ex.: receita de família, tudo feito na hora">
         </div>
         <fieldset class="campo">
           <legend>Como você quer conversar com os clientes?</legend>
-          <div class="opcoes" id="opcoes-tom">
+          <div class="opcoes">
             <label class="opcao"><input type="radio" name="tom" value="Acolhedor e familiar" required> Acolhedor e familiar</label>
             <label class="opcao"><input type="radio" name="tom" value="Divertido e descontraído"> Divertido e descontraído</label>
             <label class="opcao"><input type="radio" name="tom" value="Direto e prático"> Direto e prático</label>
@@ -86,7 +142,7 @@
           </div>
         </fieldset>
         <div class="campo">
-          <label for="postsPorSemana">Quantos posts por semana você consegue fazer?</label>
+          <label for="postsPorSemana">Quantos posts no feed por semana você consegue fazer?</label>
           <select id="postsPorSemana" name="postsPorSemana" required>
             <option value="2">2 por semana</option>
             <option value="3" selected>3 por semana</option>
@@ -94,46 +150,45 @@
             <option value="5">5 por semana</option>
             <option value="7">Todo dia</option>
           </select>
-          <small>Se estiver começando, 3 por semana já funciona bem. Melhor pouco e sempre do que muito e parar.</small>
+          <small>Os stories são sugeridos todos os dias, porque são rápidos e mantêm os seguidores por perto.</small>
         </div>
-        <div class="campo">
-          <label for="instagram">Seu @ no Instagram <span class="opcional">(opcional)</span></label>
-          <input id="instagram" name="instagram" maxlength="60" placeholder="Ex.: @cantinhodavomaria">
+        <div class="botoes">
+          <button class="botao grande" type="submit">Salvar e continuar</button>
+          <button class="botao secundario" type="button" id="botao-voltar">Voltar</button>
         </div>
-        <button class="botao grande" type="submit" id="botao-salvar-perfil">Salvar e continuar</button>
       </form>
     </section>
 
     <!-- Painel principal -->
     <section id="tela-painel" hidden>
       <nav class="abas" aria-label="Seções">
-        <button class="aba" type="button" data-aba="calendario" aria-selected="true">Calendário</button>
-        <button class="aba" type="button" data-aba="ideias" aria-selected="false">Novas ideias</button>
+        <button class="aba" type="button" data-aba="semana" aria-selected="true">Semana</button>
+        <button class="aba" type="button" data-aba="ideias" aria-selected="false">Ideias</button>
         <button class="aba" type="button" data-aba="crescer" aria-selected="false">Crescer</button>
         <button class="aba" type="button" data-aba="negocio" aria-selected="false">Meu negócio</button>
       </nav>
 
-      <div class="painel" data-painel="calendario">
+      <div class="painel" data-painel="semana">
         <div class="caixa destaque">
-          <h2>Calendário do mês</h2>
-          <p>Escolha o mês e a ferramenta monta todos os posts: o que postar, quando, legenda pronta e como gravar.</p>
+          <h2>Calendário da semana</h2>
+          <p>Stories para todos os dias e posts para o feed, com legenda pronta, como gravar e a arte para postar.</p>
           <div class="linha">
-            <label class="oculto" for="mes">Mês</label>
-            <select id="mes"></select>
-            <button class="botao" type="button" id="botao-calendario">Criar calendário do mês</button>
+            <label class="oculto" for="semana">Semana</label>
+            <select id="semana"></select>
+            <button class="botao" type="button" id="botao-semana">Criar calendário da semana</button>
           </div>
         </div>
-        <div class="carregando" id="carregando-calendario" hidden>
+        <div class="carregando" id="carregando-semana" hidden>
           <span class="roda" aria-hidden="true"></span>
-          <p>Montando o seu calendário. Isso leva de 1 a 3 minutos, pode deixar a tela aberta.</p>
+          <p>Montando a sua semana. Leva de 1 a 3 minutos, pode deixar a tela aberta.</p>
         </div>
-        <div id="resultado-calendario"></div>
+        <div id="resultado-semana"></div>
       </div>
 
       <div class="painel" data-painel="ideias" hidden>
         <div class="caixa destaque">
           <h2>Sem ideia do que postar?</h2>
-          <p>Toque no botão e receba 5 ideias novas, diferentes das que você já tem no calendário.</p>
+          <p>Toque no botão e receba 5 ideias novas para o feed, diferentes das que você já tem.</p>
           <button class="botao grande" type="button" id="botao-ideias">Me dá novas ideias</button>
         </div>
         <div class="carregando" id="carregando-ideias" hidden>
@@ -158,16 +213,32 @@
 
       <div class="painel" data-painel="negocio" hidden>
         <div class="caixa">
+          <h2>Minhas fotos</h2>
+          <p>Estas fotos são usadas nas artes dos posts. Fotos reais dos seus produtos passam mais confiança.</p>
+          <div class="miniaturas grande" id="galeria"></div>
+          <label class="botao secundario" for="arquivo-mais-fotos">Adicionar fotos</label>
+          <input class="oculto" id="arquivo-mais-fotos" type="file" accept="image/*" multiple>
+          <div class="carregando" id="carregando-fotos" hidden>
+            <span class="roda" aria-hidden="true"></span>
+            <p>Guardando e analisando as fotos.</p>
+          </div>
+        </div>
+        <div class="caixa" id="caixa-analise" hidden>
+          <h2>O que a análise encontrou</h2>
+          <div id="analise-salva"></div>
+        </div>
+        <div class="caixa">
           <h2>Dados do seu negócio</h2>
-          <p>Mudou o cardápio, os preços ou a quantidade de posts? Atualize aqui. Os próximos conteúdos já usam os dados novos.</p>
+          <p>Mudou o cardápio, os preços ou a quantidade de posts? Atualize aqui. Dá para mandar um cardápio novo.</p>
           <button class="botao" type="button" id="botao-editar-perfil">Editar dados do negócio</button>
+          <p class="nota" id="texto-autorizacao"></p>
         </div>
         <div class="caixa">
           <h2>Começar do zero</h2>
-          <p>Apaga os dados do negócio, o calendário e as ideias salvas neste aparelho.</p>
+          <p>Apaga os dados do negócio, as fotos, a autorização, o calendário e as ideias salvas neste aparelho.</p>
           <div class="linha">
             <button class="botao perigo" type="button" id="botao-apagar">Apagar tudo</button>
-            <span id="confirmar-apagar" hidden>
+            <span id="confirmar-apagar" class="linha" hidden>
               Tem certeza?
               <button class="botao perigo" type="button" id="botao-apagar-sim">Sim, apagar</button>
               <button class="botao secundario" type="button" id="botao-apagar-nao">Cancelar</button>
@@ -178,34 +249,47 @@
     </section>
   </main>
 
-  <template id="modelo-post">
-    <article class="post">
-      <div class="post-topo">
-        <div class="post-quando">
-          <span class="post-dia"></span>
-          <span class="post-hora"></span>
-        </div>
-        <span class="selo"></span>
+  <!-- Criar com IA: monta a arte do post -->
+  <dialog id="criador" aria-labelledby="criador-titulo">
+    <div class="criador">
+      <div class="criador-topo">
+        <h2 id="criador-titulo">Criar arte</h2>
+        <button class="fechar" type="button" id="criador-fechar" aria-label="Fechar">×</button>
       </div>
-      <h3 class="post-titulo"></h3>
-      <p class="post-objetivo"></p>
-      <p class="post-ideia"></p>
-      <details>
-        <summary>Ver legenda e como gravar</summary>
-        <div class="post-detalhes">
-          <h4>Como gravar ou fotografar</h4>
-          <ol class="post-roteiro"></ol>
-          <h4>Legenda pronta</h4>
-          <p class="post-legenda"></p>
-          <p class="post-hashtags"></p>
-          <div class="linha">
-            <button class="botao secundario" type="button" data-copiar="legenda">Copiar legenda com hashtags</button>
+      <div class="criador-corpo">
+        <div class="criador-previa">
+          <canvas id="arte" width="1080" height="1350"></canvas>
+          <div class="carregando pequeno" id="carregando-imagem" hidden>
+            <span class="roda" aria-hidden="true"></span>
+            <p>Gerando a imagem. Pode levar até 1 minuto.</p>
           </div>
         </div>
-      </details>
-      <label class="feito"><input type="checkbox"> Já postei</label>
-    </article>
-  </template>
+        <div class="criador-controles">
+          <fieldset class="campo">
+            <legend>Fundo</legend>
+            <div class="chips" id="opcoes-fundo">
+              <label class="chip" id="chip-foto"><input type="radio" name="fundo" value="foto"> Minha foto</label>
+              <label class="chip" id="chip-gerada"><input type="radio" name="fundo" value="gerada"> Imagem gerada pela IA</label>
+              <label class="chip"><input type="radio" name="fundo" value="cores"> Só as cores</label>
+            </div>
+          </fieldset>
+          <div class="miniaturas" id="escolha-foto"></div>
+          <button class="botao secundario" type="button" id="botao-outra-imagem" hidden>Gerar outra imagem</button>
+          <div class="campo">
+            <label for="texto-arte">Texto da arte</label>
+            <textarea id="texto-arte" rows="2" maxlength="140"></textarea>
+          </div>
+          <div class="linha" id="navegar-slides" hidden>
+            <button class="botao secundario" type="button" id="slide-anterior" aria-label="Slide anterior">‹</button>
+            <span id="slide-atual"></span>
+            <button class="botao secundario" type="button" id="slide-proximo" aria-label="Próximo slide">›</button>
+          </div>
+          <button class="botao grande" type="button" id="botao-baixar">Baixar imagem</button>
+          <p class="nota">Depois de baixar, abra o Instagram, escolha a imagem e cole a legenda.</p>
+        </div>
+      </div>
+    </div>
+  </dialog>
 
   <script src="app.js"></script>
 </body>

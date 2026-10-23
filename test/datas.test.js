@@ -1,33 +1,36 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { datasDoMes, mesValido, nomeDoMes } from "../lib/datas.js";
+import { descreverPeriodo, diasDaSemana, frequenciaDoFeed, segundaValida } from "../lib/datas.js";
 
-test("3 posts por semana caem em terça, quinta e sábado", () => {
-  const datas = datasDoMes("2026-11", 3);
-  assert.ok(datas.every((d) => ["terça-feira", "quinta-feira", "sábado"].includes(d.diaDaSemana)));
-  assert.equal(datas[0].data, "2026-11-03");
-  assert.equal(datas[0].diaDaSemana, "terça-feira");
-  assert.equal(datas.length, 12);
+test("a semana tem 7 dias, de segunda a domingo", () => {
+  const dias = diasDaSemana("2026-10-26", 3);
+  assert.equal(dias.length, 7);
+  assert.equal(dias[0].data, "2026-10-26");
+  assert.equal(dias[0].diaDaSemana, "segunda-feira");
+  assert.equal(dias[6].data, "2026-11-01");
+  assert.equal(dias[6].diaDaSemana, "domingo");
 });
 
-test("todo dia gera um post por dia do mês", () => {
-  assert.equal(datasDoMes("2026-02", 7).length, 28);
-  assert.equal(datasDoMes("2028-02", 7).length, 29);
+test("3 posts no feed caem em terça, quinta e sábado", () => {
+  const comFeed = diasDaSemana("2026-10-26", 3).filter((d) => d.temFeed).map((d) => d.diaDaSemana);
+  assert.deepEqual(comFeed, ["terça-feira", "quinta-feira", "sábado"]);
 });
 
 test("frequência fora do intervalo é ajustada", () => {
-  assert.equal(datasDoMes("2026-11", 0).length, datasDoMes("2026-11", 1).length);
-  assert.equal(datasDoMes("2026-11", 99).length, 30);
-  assert.equal(datasDoMes("2026-11", "abc").length, datasDoMes("2026-11", 3).length);
+  assert.equal(frequenciaDoFeed(0), 1);
+  assert.equal(frequenciaDoFeed(99), 7);
+  assert.equal(frequenciaDoFeed("abc"), 3);
+  assert.equal(frequenciaDoFeed(undefined), 3);
 });
 
-test("valida o mês", () => {
-  assert.ok(mesValido("2026-12"));
-  assert.ok(!mesValido("2026-13"));
-  assert.ok(!mesValido("12/2026"));
-  assert.ok(!mesValido(undefined));
+test("só aceita uma segunda-feira válida", () => {
+  assert.ok(segundaValida("2026-10-26"));
+  assert.ok(!segundaValida("2026-10-27"));
+  assert.ok(!segundaValida("2026-02-30"));
+  assert.ok(!segundaValida("26/10/2026"));
+  assert.ok(!segundaValida(undefined));
 });
 
-test("nome do mês em português", () => {
-  assert.equal(nomeDoMes("2026-11"), "novembro de 2026");
+test("descreve o período em português", () => {
+  assert.equal(descreverPeriodo("2026-10-26"), "de 26 de outubro a 1 de novembro");
 });
