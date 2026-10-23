@@ -5,7 +5,7 @@ Ferramenta simples para donos de pequenos negócios (restaurantes, bares, lancho
 - **Cadastro com análise:** o dono informa o Instagram e o site, manda a foto ou o PDF do cardápio e fotos do negócio. A ferramenta lê tudo, preenche o cadastro (produtos, preços, público, tom de voz) e mostra pontos fortes e o que melhorar. Antes, o dono autoriza o uso dos dados e das fotos.
 - **Calendário da semana:** um story por dia (de 2 a 4 telas, com figurinhas de enquete e perguntas) e os posts do feed (Reels, Carrossel e Foto), com horário, como gravar, texto de cada slide, legenda pronta e hashtags.
 - **Nova ideia:** em cada story ou post, um botão troca a sugestão por outra diferente.
-- **Criar com IA:** monta a arte pronta para postar (1080×1350 no feed, 1080×1920 no story) com a foto do próprio negócio, o texto e as cores da marca, e baixa a imagem. Opcionalmente, gera um fundo com IA pela Pollinations.
+- **Criar com IA:** monta a arte pronta para postar (1080×1350 no feed, 1080×1920 no story) com a foto do próprio negócio, o texto e as cores da marca, e baixa a imagem. Opcionalmente, gera um fundo com IA pela API do Gemini.
 - **Novas ideias e dicas para crescer**, como na primeira versão.
 
 O conteúdo é gerado pela API do Claude. Não tem login nem banco de dados: os dados, a autorização, o calendário e as fotos ficam salvos no navegador de quem usa.
@@ -83,7 +83,12 @@ Para gastar menos, defina `CLAUDE_MODEL=claude-sonnet-5-5`, que custa cerca de m
 
 - **Arte com a foto do cliente ou com as cores da marca:** é montada no próprio navegador, sem custo e sem limite. É o caminho recomendado: foto real do produto passa mais confiança, e o iFood, por exemplo, só aceita imagem de IA que represente fielmente o prato.
 - **Imagem do Google Flow:** o Google Flow não tem uma API oficial, então o app não consegue gerar lá sozinho. Na arte, a opção "Imagem do Google Flow" copia a descrição da imagem e abre o Flow; você gera com a sua conta, baixa e envia a imagem de volta, e a arte é montada com ela.
-- **Imagem gerada pela IA:** usa a Pollinations. Desde 2026 ela exige uma chave, e a conta grátis vem com um saldo pequeno ("Pollen") que acaba com o uso. Crie a conta em https://pollinations.ai, gere a chave e coloque em `POLLINATIONS_API_KEY`. Sem a chave, o botão não aparece. Não testei com a chave real; se a Pollinations mudar o endereço, ajuste em `POLLINATIONS_URL`.
+- **Imagem gerada pelo Gemini:** usa a API do Gemini (modelo `gemini-3.1-flash-lite-image`, o "Nano Banana 2 Lite"). A assinatura do Google Flow ou do Gemini **não** cobre a API: ela é cobrada à parte, cerca de US$ 0,034 por imagem, e o nível grátis da API não gera imagens. Para ligar:
+  1. Entre em https://aistudio.google.com com sua conta Google e clique em **Get API key** e depois em **Create API key**.
+  2. Ative o faturamento do projeto (o AI Studio mostra o botão **Set up billing**).
+  3. Coloque a chave em `GEMINI_API_KEY` no `.env` ou nas variáveis do Render.
+
+  Sem a chave, o botão não aparece. Toda imagem gerada leva a marca d'água invisível SynthID do Google. Não testei com a chave real.
 
 ## Variáveis de ambiente
 
@@ -93,8 +98,8 @@ Para gastar menos, defina `CLAUDE_MODEL=claude-sonnet-5-5`, que custa cerca de m
 | `CODIGO_DE_ACESSO` | Não | Código pedido antes de gerar conteúdo |
 | `MAX_GERACOES_POR_DIA` | Não | Gerações por visitante por dia (padrão 30) |
 | `CLAUDE_MODEL` | Não | Modelo usado (padrão `claude-opus-5-5`) |
-| `POLLINATIONS_API_KEY` | Não | Liga o botão "Imagem gerada pela IA" |
-| `POLLINATIONS_URL` | Não | Endereço da Pollinations (padrão `https://gen.pollinations.ai`) |
+| `GEMINI_API_KEY` | Não | Liga o botão "Imagem gerada pelo Gemini" |
+| `GEMINI_IMAGE_MODEL` | Não | Modelo de imagem (padrão `gemini-3.1-flash-lite-image`) |
 | `PORT` | Não | Porta do servidor (padrão 3000; o Render define sozinho) |
 
 ## Como o código está organizado

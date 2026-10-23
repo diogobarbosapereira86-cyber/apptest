@@ -16,8 +16,9 @@ import { lerInstagram, lerSite } from "./lib/pagina.js";
 const PORTA = Number(process.env.PORT) || 3000;
 const CODIGO_DE_ACESSO = (process.env.CODIGO_DE_ACESSO || "").trim();
 const MAX_POR_DIA = Number(process.env.MAX_GERACOES_POR_DIA) || 30;
-const CHAVE_IMAGENS = (process.env.POLLINATIONS_API_KEY || "").trim();
-const URL_IMAGENS = process.env.POLLINATIONS_URL || "https://gen.pollinations.ai";
+const CHAVE_IMAGENS = (process.env.GEMINI_API_KEY || "").trim();
+const MODELO_IMAGENS = process.env.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-lite-image";
+const URL_IMAGENS = process.env.GEMINI_URL || "https://generativelanguage.googleapis.com";
 
 const MAX_FOTOS_POR_ENVIO = 8;
 const TIPOS_DE_CARDAPIO = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
@@ -207,42 +208,45 @@ app.post("/api/dicas", gerar, async (req, res) => {
   }
 });
 
-// Gera uma imagem de fundo pela Pollinations. A chave fica só no servidor;
-// sem chave configurada, o botão de imagem gerada nem aparece na tela.
+// Gera o fundo da arte pela API do Gemini (Interactions API), cobrada por imagem.
+// A chave fica só no servidor; sem ela, o botão de imagem gerada nem aparece.
 app.post("/api/imagem", acessoLiberado, async (req, res) => {
   if (!CHAVE_IMAGENS) return res.status(503).json({ erro: "A geração de imagens não está ligada neste site." });
   const prompt = String(req.body?.prompt ?? "").slice(0, 600).trim();
   if (!prompt) return res.status(400).json({ erro: "Falta a descrição da imagem." });
   const vertical = req.body?.formato === "story";
-  const seed = Number.isInteger(req.body?.seed) ? req.body.seed : Math.floor(Math.random() * 1e6);
-  const url = new URL(`${URL_IMAGENS}/image/${encodeURIComponent(prompt)}`);
-  url.search = new URLSearchParams({
-    model: "flux",
-    width: "1080",
-    height: vertical ? "1920" : "1350",
-    seed: String(seed),
-    nologo: "true",
-  });
+  const falhou = "Não consegui gerar a imagem agora. Tente de novo ou use uma foto sua.";
   try {
-    const resposta = await fetch(url, {
-      headers: { authorization: `Bearer ${CHAVE_IMAGENS}` },
+    const resposta = await fetch(`${URL_IMAGENS}/v1beta/interactions`, {
+      method: "POST",
+      headers: { "x-goog-api-key": CHAVE_IMAGENS, "content-type": "application/json" },
+      body: JSON.stringify({
+        model: MODELO_IMAGENS,
+        // O texto da arte é escrito por cima no navegador, então a imagem vem sem letras.
+        input: `${prompt}. Photorealistic, appetizing, natural light. No text, letters, logos or watermarks.`,
+        response_format: { type: "image", mime_type: "image/jpeg", aspect_ratio: vertical ? "9:16" : "4:5", image_size: "1K" },
+      }),
       signal: AbortSignal.timeout(120_000),
     });
-    const tipo = resposta.headers.get("content-type") || "";
-    if (!resposta.ok || !tipo.startsWith("image/")) {
-      console.error("Pollinations respondeu", resposta.status, (await resposta.text()).slice(0, 300));
-      const semSaldo = resposta.status === 402 || resposta.status === 429;
-      return res.status(502).json({
-        erro: semSaldo
-          ? "Acabou o saldo grátis de imagens por hoje. Use uma foto sua ou o fundo com as cores."
-          : "Não consegui gerar a imagem agora. Tente de novo ou use uma foto sua.",
-      });
+    const dados = await resposta.json().catch(() => null);
+    const imagem = dados?.steps
+      ?.flatMap((passo) => (passo.type === "model_output" ? passo.content ?? [] : []))
+      .findLast((bloco) => bloco.type === "image" && bloco.data);
+    if (!resposta.ok || !imagem) {
+      console.error("Gemini respondeu", resposta.status, JSON.stringify(dados?.error ?? dados?.errors ?? dados?.status ?? "").slice(0, 300));
+      let erro = falhou;
+      if (resposta.status === 429) erro = "O limite de imagens do Gemini acabou por agora. Use uma foto sua ou o fundo com as cores.";
+      else if (resposta.status === 400 && /billing|FAILED_PRECONDITION/i.test(JSON.stringify(dados))) {
+        erro = "A chave do Gemini precisa de faturamento ativo no Google AI Studio para gerar imagens.";
+      } else if (resposta.status === 401 || resposta.status === 403) erro = "A chave do Gemini foi recusada. Confira a GEMINI_API_KEY.";
+      else if (resposta.ok) erro = "O Gemini não devolveu imagem para essa descrição. Tente outra imagem ou use uma foto sua.";
+      return res.status(502).json({ erro });
     }
-    res.set("content-type", tipo);
-    res.send(Buffer.from(await resposta.arrayBuffer()));
+    res.set("content-type", imagem.mime_type || "image/jpeg");
+    res.send(Buffer.from(imagem.data, "base64"));
   } catch (erro) {
     console.error("Erro ao gerar imagem:", erro.message);
-    res.status(502).json({ erro: "Não consegui gerar a imagem agora. Tente de novo ou use uma foto sua." });
+    res.status(502).json({ erro: falhou });
   }
 });
 
