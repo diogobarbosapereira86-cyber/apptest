@@ -1,0 +1,30 @@
+{
+  "name": "conteudo-instagram",
+  "version": "1.0.0",
+  "description": "Ferramenta simples para criar calendário e ideias de posts para Instagram de pequenos negócios",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js",
+    "dev": "node --watch --env-file-if-exists=.env server.js",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/diogobarbosapereira86-cyber/apptest.git"
+  },
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/diogobarbosapereira86-cyber/apptest/issues"
+  },
+  "homepage": "https://github.com/diogobarbosapereira86-cyber/apptest#readme",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.2.0",
+    "express": "^5.3.0",
+    "zod": "^4.6.7"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "private": true
+}

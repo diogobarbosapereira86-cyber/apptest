@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conteúdo para o seu Instagram</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-dentro">
+      <span class="marca">Conteúdo para o seu Instagram</span>
+      <span class="nome-negocio" id="nome-negocio"></span>
+    </div>
+  </header>
+
+  <main class="pagina">
+    <div class="aviso erro" id="aviso" role="alert" hidden></div>
+
+    <section class="caixa" id="caixa-codigo" hidden>
+      <h2>Digite o código de acesso</h2>
+      <p>Quem montou este site combinou um código com você. Digite uma vez e ele fica salvo neste aparelho.</p>
+      <form id="form-codigo" class="linha">
+        <label class="oculto" for="codigo">Código de acesso</label>
+        <input id="codigo" name="codigo" type="password" autocomplete="off" required>
+        <button class="botao" type="submit">Salvar código</button>
+      </form>
+    </section>
+
+    <!-- Cadastro do negócio -->
+    <section id="tela-cadastro" hidden>
+      <h1>Conte um pouco sobre o seu negócio</h1>
+      <p class="lead">Com essas respostas, a ferramenta cria posts com a cara do seu negócio. Leva uns 3 minutos e você pode mudar depois.</p>
+      <form id="form-perfil" class="formulario">
+        <div class="campo">
+          <label for="nome">Nome do negócio</label>
+          <input id="nome" name="nome" required maxlength="120" placeholder="Ex.: Cantinho da Vó Maria">
+        </div>
+        <div class="campo">
+          <label for="tipo">Que tipo de negócio é?</label>
+          <select id="tipo" name="tipo" required>
+            <option value="">Escolha uma opção</option>
+            <option>Restaurante</option>
+            <option>Bar</option>
+            <option>Lanchonete</option>
+            <option>Pizzaria</option>
+            <option>Hamburgueria</option>
+            <option>Cafeteria</option>
+            <option>Padaria</option>
+            <option>Doceria ou confeitaria</option>
+            <option>Marmitaria</option>
+            <option>Salão de beleza ou barbearia</option>
+            <option>Loja de roupas</option>
+            <option>Outro</option>
+          </select>
+        </div>
+        <div class="campo" id="campo-tipo-outro" hidden>
+          <label for="tipoOutro">Qual?</label>
+          <input id="tipoOutro" name="tipoOutro" maxlength="120" placeholder="Ex.: pet shop, açaiteria">
+        </div>
+        <div class="campo">
+          <label for="cidade">Cidade e bairro</label>
+          <input id="cidade" name="cidade" required maxlength="120" placeholder="Ex.: Vila Mariana, São Paulo">
+        </div>
+        <div class="campo">
+          <label for="produtos">O que você vende? Coloque os principais itens e preços</label>
+          <textarea id="produtos" name="produtos" required rows="5" maxlength="1500" placeholder="Ex.: Feijoada completa R$ 39,90 (só sábado). Prato feito R$ 24,90. Marmita P R$ 18. Suco natural R$ 8."></textarea>
+          <small>Pode colar o seu cardápio aqui. Quanto mais detalhe, melhores os posts.</small>
+        </div>
+        <div class="campo">
+          <label for="publico">Quem são os seus clientes?</label>
+          <input id="publico" name="publico" required maxlength="300" placeholder="Ex.: trabalhadores da região no almoço e famílias no fim de semana">
+        </div>
+        <div class="campo">
+          <label for="diferenciais">O que o seu negócio tem de especial? <span class="opcional">(opcional)</span></label>
+          <input id="diferenciais" name="diferenciais" maxlength="300" placeholder="Ex.: receita de família, tudo feito na hora, ambiente com música ao vivo">
+        </div>
+        <fieldset class="campo">
+          <legend>Como você quer conversar com os clientes?</legend>
+          <div class="opcoes" id="opcoes-tom">
+            <label class="opcao"><input type="radio" name="tom" value="Acolhedor e familiar" required> Acolhedor e familiar</label>
+            <label class="opcao"><input type="radio" name="tom" value="Divertido e descontraído"> Divertido e descontraído</label>
+            <label class="opcao"><input type="radio" name="tom" value="Direto e prático"> Direto e prático</label>
+            <label class="opcao"><input type="radio" name="tom" value="Sofisticado e elegante"> Sofisticado e elegante</label>
+          </div>
+        </fieldset>
+        <div class="campo">
+          <label for="postsPorSemana">Quantos posts por semana você consegue fazer?</label>
+          <select id="postsPorSemana" name="postsPorSemana" required>
+            <option value="2">2 por semana</option>
+            <option value="3" selected>3 por semana</option>
+            <option value="4">4 por semana</option>
+            <option value="5">5 por semana</option>
+            <option value="7">Todo dia</option>
+          </select>
+          <small>Se estiver começando, 3 por semana já funciona bem. Melhor pouco e sempre do que muito e parar.</small>
+        </div>
+        <div class="campo">
+          <label for="instagram">Seu @ no Instagram <span class="opcional">(opcional)</span></label>
+          <input id="instagram" name="instagram" maxlength="60" placeholder="Ex.: @cantinhodavomaria">
+        </div>
+        <button class="botao grande" type="submit" id="botao-salvar-perfil">Salvar e continuar</button>
+      </form>
+    </section>
+
+    <!-- Painel principal -->
+    <section id="tela-painel" hidden>
+      <nav class="abas" aria-label="Seções">
+        <button class="aba" type="button" data-aba="calendario" aria-selected="true">Calendário</button>
+        <button class="aba" type="button" data-aba="ideias" aria-selected="false">Novas ideias</button>
+        <button class="aba" type="button" data-aba="crescer" aria-selected="false">Crescer</button>
+        <button class="aba" type="button" data-aba="negocio" aria-selected="false">Meu negócio</button>
+      </nav>
+
+      <div class="painel" data-painel="calendario">
+        <div class="caixa destaque">
+          <h2>Calendário do mês</h2>
+          <p>Escolha o mês e a ferramenta monta todos os posts: o que postar, quando, legenda pronta e como gravar.</p>
+          <div class="linha">
+            <label class="oculto" for="mes">Mês</label>
+            <select id="mes"></select>
+            <button class="botao" type="button" id="botao-calendario">Criar calendário do mês</button>
+          </div>
+        </div>
+        <div class="carregando" id="carregando-calendario" hidden>
+          <span class="roda" aria-hidden="true"></span>
+          <p>Montando o seu calendário. Isso leva de 1 a 3 minutos, pode deixar a tela aberta.</p>
+        </div>
+        <div id="resultado-calendario"></div>
+      </div>
+
+      <div class="painel" data-painel="ideias" hidden>
+        <div class="caixa destaque">
+          <h2>Sem ideia do que postar?</h2>
+          <p>Toque no botão e receba 5 ideias novas, diferentes das que você já tem no calendário.</p>
+          <button class="botao grande" type="button" id="botao-ideias">Me dá novas ideias</button>
+        </div>
+        <div class="carregando" id="carregando-ideias" hidden>
+          <span class="roda" aria-hidden="true"></span>
+          <p>Pensando em ideias novas. Leva menos de 1 minuto.</p>
+        </div>
+        <div id="resultado-ideias"></div>
+      </div>
+
+      <div class="painel" data-painel="crescer" hidden>
+        <div class="caixa destaque">
+          <h2>Como mais gente pode conhecer o seu negócio</h2>
+          <p>Dicas práticas para o seu tipo de negócio e a sua cidade, começando pelas mais fáceis.</p>
+          <button class="botao grande" type="button" id="botao-dicas">Ver dicas para crescer</button>
+        </div>
+        <div class="carregando" id="carregando-dicas" hidden>
+          <span class="roda" aria-hidden="true"></span>
+          <p>Preparando as dicas. Leva menos de 1 minuto.</p>
+        </div>
+        <div id="resultado-dicas"></div>
+      </div>
+
+      <div class="painel" data-painel="negocio" hidden>
+        <div class="caixa">
+          <h2>Dados do seu negócio</h2>
+          <p>Mudou o cardápio, os preços ou a quantidade de posts? Atualize aqui. Os próximos conteúdos já usam os dados novos.</p>
+          <button class="botao" type="button" id="botao-editar-perfil">Editar dados do negócio</button>
+        </div>
+        <div class="caixa">
+          <h2>Começar do zero</h2>
+          <p>Apaga os dados do negócio, o calendário e as ideias salvas neste aparelho.</p>
+          <div class="linha">
+            <button class="botao perigo" type="button" id="botao-apagar">Apagar tudo</button>
+            <span id="confirmar-apagar" hidden>
+              Tem certeza?
+              <button class="botao perigo" type="button" id="botao-apagar-sim">Sim, apagar</button>
+              <button class="botao secundario" type="button" id="botao-apagar-nao">Cancelar</button>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <template id="modelo-post">
+    <article class="post">
+      <div class="post-topo">
+        <div class="post-quando">
+          <span class="post-dia"></span>
+          <span class="post-hora"></span>
+        </div>
+        <span class="selo"></span>
+      </div>
+      <h3 class="post-titulo"></h3>
+      <p class="post-objetivo"></p>
+      <p class="post-ideia"></p>
+      <details>
+        <summary>Ver legenda e como gravar</summary>
+        <div class="post-detalhes">
+          <h4>Como gravar ou fotografar</h4>
+          <ol class="post-roteiro"></ol>
+          <h4>Legenda pronta</h4>
+          <p class="post-legenda"></p>
+          <p class="post-hashtags"></p>
+          <div class="linha">
+            <button class="botao secundario" type="button" data-copiar="legenda">Copiar legenda com hashtags</button>
+          </div>
+        </div>
+      </details>
+      <label class="feito"><input type="checkbox"> Já postei</label>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
