@@ -83,7 +83,9 @@ async function pedir(caminho, corpo, idCarregando, botao) {
     return dados;
   } catch (erro) {
     const mensagem =
-      erro instanceof TypeError ? "Sem conexão com o site. Verifique a internet e tente de novo." : erro.message;
+      erro instanceof TypeError
+        ? "Não consegui falar com o servidor. Confira se a janela onde você rodou “npm start” continua aberta e se o endereço no navegador é http://localhost:3000."
+        : erro.message;
     mostrarAviso(mensagem);
     return null;
   } finally {
@@ -398,6 +400,10 @@ $("#form-codigo").addEventListener("submit", (evento) => {
 
 async function iniciar() {
   preencherMeses();
+  if (location.protocol === "file:") {
+    // Aberto com dois cliques no index.html: sem o servidor, nada pode ser gerado.
+    mostrarAviso("Esta página precisa ser aberta pelo endereço http://localhost:3000, com o “npm start” rodando. Abrir o arquivo index.html direto não funciona.", "atencao");
+  }
   try {
     config = await (await fetch("/api/config")).json();
   } catch {}
