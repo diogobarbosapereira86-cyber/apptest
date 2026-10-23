@@ -82,6 +82,7 @@ Para gastar menos, defina `CLAUDE_MODEL=claude-sonnet-5-5`, que custa cerca de m
 ## Imagens: o que é grátis e o que não é
 
 - **Arte com a foto do cliente ou com as cores da marca:** é montada no próprio navegador, sem custo e sem limite. É o caminho recomendado: foto real do produto passa mais confiança, e o iFood, por exemplo, só aceita imagem de IA que represente fielmente o prato.
+- **Imagem do Google Flow:** o Google Flow não tem uma API oficial, então o app não consegue gerar lá sozinho. Na arte, a opção "Imagem do Google Flow" copia a descrição da imagem e abre o Flow; você gera com a sua conta, baixa e envia a imagem de volta, e a arte é montada com ela.
 - **Imagem gerada pela IA:** usa a Pollinations. Desde 2026 ela exige uma chave, e a conta grátis vem com um saldo pequeno ("Pollen") que acaba com o uso. Crie a conta em https://pollinations.ai, gere a chave e coloque em `POLLINATIONS_API_KEY`. Sem a chave, o botão não aparece. Não testei com a chave real; se a Pollinations mudar o endereço, ajuste em `POLLINATIONS_URL`.
 
 ## Variáveis de ambiente

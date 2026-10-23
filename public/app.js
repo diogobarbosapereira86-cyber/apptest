@@ -813,6 +813,7 @@ const criador = {
   slide: 0,
   fotoId: null,
   imagemFundo: null,
+  imagemFlow: null, // imagem que o dono gerou no Google Flow e enviou
   seed: 1,
 };
 
@@ -850,7 +851,7 @@ function desenharArte() {
   const fundo = document.querySelector("input[name=fundo]:checked")?.value;
   ctx.clearRect(0, 0, L, A);
 
-  if ((fundo === "foto" || fundo === "gerada") && criador.imagemFundo) {
+  if (["foto", "gerada", "flow"].includes(fundo) && criador.imagemFundo) {
     // Preenche a arte inteira com a imagem, cortando as sobras.
     const img = criador.imagemFundo;
     const escala = Math.max(L / img.width, A / img.height);
@@ -953,8 +954,13 @@ async function trocarFundo() {
   const fundo = document.querySelector("input[name=fundo]:checked")?.value;
   $("#escolha-foto").hidden = fundo !== "foto";
   $("#botao-outra-imagem").hidden = fundo !== "gerada";
+  $("#painel-flow").hidden = fundo !== "flow";
   if (fundo === "foto") await usarFoto(criador.fotoId);
   else if (fundo === "gerada") await gerarImagem();
+  else if (fundo === "flow") {
+    criador.imagemFundo = criador.imagemFlow;
+    desenharArte();
+  }
   else {
     criador.imagemFundo = null;
     desenharArte();
@@ -973,6 +979,7 @@ async function abrirCriador(item, tipo) {
   criador.item = item;
   criador.tipo = tipo;
   criador.slide = 0;
+  criador.imagemFlow = null;
   criador.seed = Math.floor(Math.random() * 1e6);
   criador.textos = item.slides?.length ? [...item.slides] : [item.titulo_arte || item.titulo || item.tema || ""];
   canvas.width = 1080;
@@ -1031,6 +1038,16 @@ $("#slide-proximo").addEventListener("click", () => {
 $("#botao-outra-imagem").addEventListener("click", () => {
   criador.seed = Math.floor(Math.random() * 1e6);
   gerarImagem();
+});
+// Google Flow: não tem API, então o dono gera lá com a conta dele e envia o arquivo.
+$("#botao-copiar-prompt").addEventListener("click", (e) => copiar(criador.item.prompt_imagem || "", e.currentTarget));
+$("#arquivo-flow").addEventListener("change", async (evento) => {
+  const arquivo = evento.target.files[0];
+  evento.target.value = "";
+  if (!arquivo) return;
+  criador.imagemFlow = await carregarImagem(await reduzirImagem(arquivo, 2000, 0.92));
+  criador.imagemFundo = criador.imagemFlow;
+  desenharArte();
 });
 $("#criador-fechar").addEventListener("click", () => $("#criador").close());
 $("#botao-baixar").addEventListener("click", () => {

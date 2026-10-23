@@ -269,12 +269,22 @@
             <legend>Fundo</legend>
             <div class="chips" id="opcoes-fundo">
               <label class="chip" id="chip-foto"><input type="radio" name="fundo" value="foto"> Minha foto</label>
+              <label class="chip"><input type="radio" name="fundo" value="flow"> Imagem do Google Flow</label>
               <label class="chip" id="chip-gerada"><input type="radio" name="fundo" value="gerada"> Imagem gerada pela IA</label>
               <label class="chip"><input type="radio" name="fundo" value="cores"> Só as cores</label>
             </div>
           </fieldset>
           <div class="miniaturas" id="escolha-foto"></div>
           <button class="botao secundario" type="button" id="botao-outra-imagem" hidden>Gerar outra imagem</button>
+          <div class="passos-flow" id="painel-flow" hidden>
+            <p>Gere a imagem no Google Flow com a sua conta e traga para cá:</p>
+            <ol class="post-roteiro">
+              <li>Copie a descrição da imagem. <button class="botao pequeno secundario" type="button" id="botao-copiar-prompt">Copiar descrição</button></li>
+              <li>Abra o <a href="https://labs.google/fx/tools/flow" target="_blank" rel="noopener">Google Flow</a>, cole a descrição, gere a imagem e baixe a que mais gostar.</li>
+              <li><label class="botao pequeno" for="arquivo-flow">Enviar a imagem gerada</label></li>
+            </ol>
+            <input class="oculto" id="arquivo-flow" type="file" accept="image/*">
+          </div>
           <div class="campo">
             <label for="texto-arte">Texto da arte</label>
             <textarea id="texto-arte" rows="2" maxlength="140"></textarea>

@@ -390,6 +390,8 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 }
 .carregando.pequeno { position: absolute; left: 8px; right: 8px; bottom: 8px; padding: 10px; font-size: 0.9rem; }
 .criador-controles { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.passos-flow { display: flex; flex-direction: column; gap: 8px; font-size: 0.95rem; }
+.passos-flow a { color: var(--azul-claro); }
 #slide-atual { min-width: 110px; text-align: center; }
 
 @media (max-width: 700px) {
