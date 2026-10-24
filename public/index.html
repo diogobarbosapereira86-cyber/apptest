@@ -13,20 +13,49 @@
     <div class="topo-dentro">
       <span class="marca">Conteúdo para o seu Instagram</span>
       <span class="nome-negocio" id="nome-negocio"></span>
+      <span class="conta" id="conta" hidden>
+        <span id="conta-email"></span>
+        <button class="botao secundario pequeno" type="button" id="botao-sair">Sair</button>
+      </span>
     </div>
   </header>
 
   <main class="pagina">
     <div class="aviso erro" id="aviso" role="alert" hidden></div>
 
-    <section class="caixa" id="caixa-codigo" hidden>
-      <h2>Digite o código de acesso</h2>
-      <p>Quem montou este site combinou um código com você. Digite uma vez e ele fica salvo neste aparelho.</p>
-      <form id="form-codigo" class="linha">
-        <label class="oculto" for="codigo">Código de acesso</label>
-        <input id="codigo" name="codigo" type="password" autocomplete="off" required>
-        <button class="botao" type="submit">Salvar código</button>
-      </form>
+    <!-- Entrar ou criar conta -->
+    <section id="tela-login" hidden>
+      <h1>Entre na sua conta</h1>
+      <p class="lead">Calendário, ideias e artes para o Instagram do seu negócio.</p>
+      <div class="caixa">
+        <div id="botao-google" class="botao-google" hidden></div>
+        <p class="separador" id="separador-google" hidden><span>ou com e-mail</span></p>
+        <nav class="abas duas" aria-label="Entrar ou criar conta">
+          <button class="aba" type="button" data-modo="entrar" aria-selected="true">Entrar</button>
+          <button class="aba" type="button" data-modo="criar" aria-selected="false">Criar conta</button>
+        </nav>
+        <form id="form-login" class="formulario">
+          <div class="campo" id="campo-nome-conta" hidden>
+            <label for="nome-conta">Seu nome</label>
+            <input id="nome-conta" name="nome" maxlength="120" autocomplete="name">
+          </div>
+          <div class="campo" id="campo-email">
+            <label for="email">E-mail</label>
+            <input id="email" name="email" type="email" required maxlength="200" autocomplete="email" autocapitalize="off">
+          </div>
+          <div class="campo" id="campo-senha">
+            <label for="senha">Senha</label>
+            <input id="senha" name="senha" type="password" required minlength="8" maxlength="200" autocomplete="current-password">
+            <small id="ajuda-senha" hidden>Pelo menos 8 caracteres.</small>
+          </div>
+          <div class="campo" id="campo-convite" hidden>
+            <label for="convite">Código de convite</label>
+            <input id="convite" name="convite" autocomplete="off">
+            <small>Quem te convidou passou esse código.</small>
+          </div>
+          <button class="botao grande" type="submit" id="botao-login">Entrar</button>
+        </form>
+      </div>
     </section>
 
     <!-- Cadastro, passo 1: dados básicos, arquivos e autorização -->
@@ -249,58 +278,109 @@
     </section>
   </main>
 
-  <!-- Criar com IA: monta a arte do post -->
+  <!-- Criar arte: post, carrossel, Reels e story -->
   <dialog id="criador" aria-labelledby="criador-titulo">
     <div class="criador">
       <div class="criador-topo">
-        <h2 id="criador-titulo">Criar arte</h2>
+        <div>
+          <h2 id="criador-titulo">Criar arte</h2>
+          <p class="nota" id="criador-ajuda"></p>
+        </div>
         <button class="fechar" type="button" id="criador-fechar" aria-label="Fechar">×</button>
       </div>
       <div class="criador-corpo">
         <div class="criador-previa">
-          <canvas id="arte" width="1080" height="1350"></canvas>
-          <div class="carregando pequeno" id="carregando-imagem" hidden>
-            <span class="roda" aria-hidden="true"></span>
-            <p>Gerando a imagem. Pode levar até 1 minuto.</p>
+          <div class="moldura">
+            <canvas id="arte" width="1080" height="1350" aria-label="Prévia da arte. Arraste para mudar a posição da imagem."></canvas>
+            <div class="carregando pequeno" id="carregando-imagem" hidden>
+              <span class="roda" aria-hidden="true"></span>
+              <p>Gerando a imagem. Pode levar até 1 minuto.</p>
+            </div>
+          </div>
+          <div class="linha centro" id="navegar-quadros" hidden>
+            <button class="botao secundario pequeno" type="button" id="quadro-anterior" aria-label="Anterior">‹</button>
+            <span id="quadro-atual"></span>
+            <button class="botao secundario pequeno" type="button" id="quadro-proximo" aria-label="Próximo">›</button>
+          </div>
+          <div class="linha centro" id="editar-quadros" hidden>
+            <button class="botao dourado pequeno" type="button" id="quadro-adicionar">+ Slide</button>
+            <button class="botao secundario pequeno" type="button" id="quadro-remover">Remover este</button>
           </div>
         </div>
         <div class="criador-controles">
+          <p class="dica-quadro" id="dica-quadro" hidden></p>
           <fieldset class="campo">
-            <legend>Fundo</legend>
-            <div class="chips" id="opcoes-fundo">
-              <label class="chip" id="chip-foto"><input type="radio" name="fundo" value="foto"> Minha foto</label>
-              <label class="chip"><input type="radio" name="fundo" value="flow"> Imagem do Google Flow</label>
-              <label class="chip" id="chip-gerada"><input type="radio" name="fundo" value="gerada"> Imagem gerada pelo Gemini</label>
-              <label class="chip"><input type="radio" name="fundo" value="cores"> Só as cores</label>
+            <legend>Foto ou vídeo</legend>
+            <div class="chips">
+              <label class="chip"><input type="radio" name="fonte" value="banco"> Minhas fotos</label>
+              <label class="chip"><input type="radio" name="fonte" value="ia"> Criar com IA</label>
+              <label class="chip"><input type="radio" name="fonte" value="subir"> Subir mídia</label>
             </div>
           </fieldset>
-          <div class="miniaturas" id="escolha-foto"></div>
-          <button class="botao secundario" type="button" id="botao-outra-imagem" hidden>Gerar outra imagem</button>
-          <div class="passos-flow" id="painel-flow" hidden>
-            <p>Gere a imagem no Google Flow com a sua conta e traga para cá:</p>
-            <ol class="post-roteiro">
-              <li>Copie a descrição da imagem. <button class="botao pequeno secundario" type="button" id="botao-copiar-prompt">Copiar descrição</button></li>
-              <li>Abra o <a href="https://labs.google/fx/tools/flow" target="_blank" rel="noopener">Google Flow</a>, cole a descrição, gere a imagem e baixe a que mais gostar.</li>
-              <li><label class="botao pequeno" for="arquivo-flow">Enviar a imagem gerada</label></li>
-            </ol>
-            <input class="oculto" id="arquivo-flow" type="file" accept="image/*">
+          <div id="painel-banco">
+            <div class="miniaturas" id="escolha-foto"></div>
+            <p class="nota" id="banco-vazio" hidden>Você ainda não tem fotos guardadas. Adicione em “Meu negócio” ou use “Subir mídia”.</p>
           </div>
+          <div class="painel-fonte" id="painel-ia" hidden>
+            <button class="botao" type="button" id="botao-gerar-ia">Gerar imagem com o Gemini</button>
+            <p class="nota" id="ia-desligada" hidden>A criação com IA não está ligada neste site: falta a chave GEMINI_API_KEY. Veja o README.</p>
+            <details>
+              <summary>Prefere gerar no Google Flow?</summary>
+              <ol class="post-roteiro passos-flow">
+                <li>Copie a descrição da imagem. <button class="botao pequeno secundario" type="button" id="botao-copiar-prompt">Copiar descrição</button></li>
+                <li>Abra o <a href="https://labs.google/fx/tools/flow" target="_blank" rel="noopener">Google Flow</a>, cole, gere e baixe a imagem.</li>
+                <li>Volte aqui e use “Subir mídia”.</li>
+              </ol>
+            </details>
+          </div>
+          <div class="painel-fonte" id="painel-subir" hidden>
+            <label class="envio" for="arquivo-midia">
+              <span class="envio-titulo" id="subir-titulo">Escolher foto ou vídeo</span>
+              <span class="envio-ajuda">Serve só para esta arte e não fica guardada nas suas fotos.</span>
+            </label>
+            <input class="oculto" id="arquivo-midia" type="file">
+          </div>
+          <fieldset class="campo" id="ajuste-midia" hidden>
+            <legend>Enquadrar</legend>
+            <p class="nota">Arraste a imagem na prévia para mudar a posição. Use o controle (ou dois dedos) para aumentar ou diminuir.</p>
+            <label class="oculto" for="zoom">Tamanho</label>
+            <input type="range" id="zoom" min="0.3" max="3" step="0.01" value="1">
+            <div class="linha">
+              <button class="botao secundario pequeno" type="button" id="ajuste-preencher">Preencher</button>
+              <button class="botao secundario pequeno" type="button" id="ajuste-inteira">Mostrar inteira</button>
+              <button class="botao secundario pequeno" type="button" id="video-tocar" hidden>Pausar vídeo</button>
+            </div>
+          </fieldset>
           <div class="campo">
-            <label for="texto-arte">Texto da arte</label>
-            <textarea id="texto-arte" rows="2" maxlength="140"></textarea>
+            <label for="texto-arte">Texto na arte</label>
+            <textarea id="texto-arte" rows="2" maxlength="160" placeholder="Deixe vazio para não ter texto"></textarea>
           </div>
-          <div class="linha" id="navegar-slides" hidden>
-            <button class="botao secundario" type="button" id="slide-anterior" aria-label="Slide anterior">‹</button>
-            <span id="slide-atual"></span>
-            <button class="botao secundario" type="button" id="slide-proximo" aria-label="Próximo slide">›</button>
+          <fieldset class="campo">
+            <legend>Posição do texto</legend>
+            <div class="chips">
+              <label class="chip"><input type="radio" name="pos-texto" value="cima"> Em cima</label>
+              <label class="chip"><input type="radio" name="pos-texto" value="meio"> No meio</label>
+              <label class="chip"><input type="radio" name="pos-texto" value="baixo"> Embaixo</label>
+            </div>
+          </fieldset>
+          <label class="feito" id="guias-opcao"><input type="checkbox" id="mostrar-guias" checked> Mostrar as áreas que o Instagram cobre</label>
+          <div class="carregando" id="carregando-exportar" hidden>
+            <span class="roda" aria-hidden="true"></span>
+            <p id="texto-exportar"></p>
           </div>
-          <button class="botao grande" type="button" id="botao-baixar">Baixar imagem</button>
-          <p class="nota">Depois de baixar, abra o Instagram, escolha a imagem e cole a legenda.</p>
+          <div class="botoes">
+            <button class="botao grande" type="button" id="botao-baixar">Baixar</button>
+            <button class="botao secundario" type="button" id="botao-baixar-todos" hidden>Baixar todos (.zip)</button>
+            <button class="botao secundario" type="button" id="botao-capa" hidden>Baixar capa do Reels</button>
+            <button class="botao dourado" type="button" id="botao-compartilhar" hidden>Enviar para o Instagram</button>
+          </div>
+          <p class="nota" id="criador-nota" role="status"></p>
         </div>
       </div>
     </div>
   </dialog>
 
   <script src="app.js"></script>
+  <script src="editor.js"></script>
 </body>
 </html>

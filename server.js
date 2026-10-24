@@ -12,9 +12,13 @@ import {
 } from "./lib/conteudo.js";
 import { segundaValida } from "./lib/datas.js";
 import { lerInstagram, lerSite } from "./lib/pagina.js";
+import { abrirBanco } from "./lib/banco.js";
+import { criarLogin } from "./lib/login.js";
 
 const PORTA = Number(process.env.PORT) || 3000;
+// Código de convite pedido para criar uma conta nova. Vazio: qualquer um pode criar conta.
 const CODIGO_DE_ACESSO = (process.env.CODIGO_DE_ACESSO || "").trim();
+const GOOGLE_CLIENT_ID = (process.env.GOOGLE_CLIENT_ID || "").trim();
 const MAX_POR_DIA = Number(process.env.MAX_GERACOES_POR_DIA) || 30;
 const CHAVE_IMAGENS = (process.env.GEMINI_API_KEY || "").trim();
 const MODELO_IMAGENS = process.env.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-lite-image";
@@ -31,22 +35,32 @@ app.set("trust proxy", 1);
 app.use(express.json({ limit: "40mb" }));
 app.use(express.static(fileURLToPath(new URL("./public", import.meta.url))));
 
+const banco = await abrirBanco();
+await banco.apagarSessoesVencidas();
+const { rotas: rotasDeLogin, exigirLogin } = criarLogin({
+  banco,
+  convite: CODIGO_DE_ACESSO,
+  googleClientId: GOOGLE_CLIENT_ID,
+});
+app.use(rotasDeLogin);
+
 app.get("/api/config", (req, res) => {
   res.json({
-    pedeCodigo: Boolean(CODIGO_DE_ACESSO),
+    pedeConvite: Boolean(CODIGO_DE_ACESSO),
+    googleClientId: GOOGLE_CLIENT_ID,
     chaveConfigurada: Boolean(process.env.ANTHROPIC_API_KEY),
     geraImagem: Boolean(CHAVE_IMAGENS),
   });
 });
 
-// Limite simples de gerações por visitante (por IP), guardado em memória.
+// Limite simples de gerações por conta, guardado em memória.
 // Zera quando o dia muda ou quando o servidor reinicia.
-const usoPorIp = new Map();
-function dentroDoLimite(ip) {
+const usoPorConta = new Map();
+function dentroDoLimite(chave) {
   const hoje = new Date().toISOString().slice(0, 10);
-  const uso = usoPorIp.get(ip);
+  const uso = usoPorConta.get(chave);
   if (!uso || uso.dia !== hoje) {
-    usoPorIp.set(ip, { dia: hoje, total: 1 });
+    usoPorConta.set(chave, { dia: hoje, total: 1 });
     return true;
   }
   if (uso.total >= MAX_POR_DIA) return false;
@@ -54,15 +68,14 @@ function dentroDoLimite(ip) {
   return true;
 }
 
-function acessoLiberado(req, res, next) {
-  if (CODIGO_DE_ACESSO && req.get("x-codigo-acesso") !== CODIGO_DE_ACESSO) {
-    return res.status(401).json({ erro: "Código de acesso errado. Confira o código e tente de novo.", pedeCodigo: true });
-  }
-  if (!dentroDoLimite(req.ip)) {
+function limiteDoDia(req, res, next) {
+  if (!dentroDoLimite(req.usuario.id)) {
     return res.status(429).json({ erro: `Você já fez ${MAX_POR_DIA} gerações hoje. Volte amanhã para gerar mais.` });
   }
   next();
 }
+
+const acessoLiberado = [exigirLogin, limiteDoDia];
 
 function temChaveClaude(req, res, next) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -88,7 +101,7 @@ function temAutorizacao(req, res, next) {
   next();
 }
 
-const gerar = [temChaveClaude, perfilCompleto, acessoLiberado];
+const gerar = [exigirLogin, temChaveClaude, perfilCompleto, limiteDoDia];
 
 function fotosValidas(fotos) {
   if (fotos === undefined) return [];
@@ -140,7 +153,7 @@ function responderErro(res, erro) {
   return res.status(500).json({ erro: "Algo deu errado. Tente de novo." });
 }
 
-app.post("/api/analisar", temChaveClaude, temAutorizacao, acessoLiberado, async (req, res) => {
+app.post("/api/analisar", exigirLogin, temChaveClaude, temAutorizacao, limiteDoDia, async (req, res) => {
   const { perfil } = req.body;
   if (!perfil?.nome || !perfil?.tipo) {
     return res.status(400).json({ erro: "Preencha pelo menos o nome e o tipo do negócio." });
@@ -158,7 +171,7 @@ app.post("/api/analisar", temChaveClaude, temAutorizacao, acessoLiberado, async 
   }
 });
 
-app.post("/api/fotos", temChaveClaude, temAutorizacao, acessoLiberado, async (req, res) => {
+app.post("/api/fotos", exigirLogin, temChaveClaude, temAutorizacao, limiteDoDia, async (req, res) => {
   const fotos = fotosValidas(req.body.fotos);
   if (!fotos?.length) return res.status(400).json({ erro: `Envie de 1 a ${MAX_FOTOS_POR_ENVIO} fotos de cada vez.` });
   try {
@@ -252,6 +265,10 @@ app.post("/api/imagem", acessoLiberado, async (req, res) => {
 
 app.listen(PORTA, () => {
   console.log(`Site rodando em http://localhost:${PORTA}`);
+  if (process.env.RENDER && banco.tipo !== "postgres") {
+    console.warn("Atenção: sem DATABASE_URL, as contas somem quando o Render reinicia o site. Veja o README.");
+  }
+  console.log(banco.tipo === "postgres" ? "Contas salvas no Postgres (DATABASE_URL)." : `Contas salvas no arquivo ${process.env.ARQUIVO_BANCO || "dados/app.db"}.`);
   if (!process.env.ANTHROPIC_API_KEY) {
     console.warn("Atenção: ANTHROPIC_API_KEY não configurada. Veja o README.");
   }

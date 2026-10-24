@@ -390,13 +390,30 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 }
 .carregando.pequeno { position: absolute; left: 8px; right: 8px; bottom: 8px; padding: 10px; font-size: 0.9rem; }
 .criador-controles { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.passos-flow { display: flex; flex-direction: column; gap: 8px; font-size: 0.95rem; }
+.passos-flow { font-size: 0.95rem; padding-top: 8px; }
 .passos-flow a { color: var(--azul-claro); }
-#slide-atual { min-width: 110px; text-align: center; }
+#quadro-atual { min-width: 110px; text-align: center; }
+.criador-previa { flex-direction: column; align-items: center; gap: 10px; }
+.moldura { position: relative; width: 100%; display: flex; justify-content: center; }
+.criador-previa canvas { touch-action: none; cursor: grab; }
+.criador-previa canvas[data-formato="reels"], .criador-previa canvas[data-formato="story"] { max-width: 300px; }
+.linha.centro { justify-content: center; }
+.painel-fonte { display: flex; flex-direction: column; gap: 10px; }
+.dica-quadro { border-left: 3px solid var(--dourado); padding: 6px 12px; color: var(--prata); font-size: 0.95rem; background: var(--superficie); border-radius: 0 10px 10px 0; }
+.atencao-texto { color: var(--dourado); }
+input[type="range"] { padding: 0; border: 0; background: transparent; accent-color: var(--azul); min-height: 40px; }
+
+/* Login */
+.conta { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--suave); }
+.abas.duas { grid-template-columns: repeat(2, 1fr); position: static; }
+.botao-google { display: flex; justify-content: center; min-height: 44px; }
+.separador { display: flex; align-items: center; gap: 12px; color: var(--suave); font-size: 0.9rem; }
+.separador::before, .separador::after { content: ""; flex: 1; border-top: 1px solid var(--linha); }
 
 @media (max-width: 700px) {
   .criador-corpo { grid-template-columns: 1fr; }
   .criador-previa canvas { max-width: 260px; }
+  .criador-previa canvas[data-formato="reels"], .criador-previa canvas[data-formato="story"] { max-width: 220px; }
 }
 
 @media (max-width: 480px) {

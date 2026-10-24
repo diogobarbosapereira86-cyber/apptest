@@ -1,5 +1,6 @@
 // Tudo o que o dono preenche e gera fica salvo neste aparelho: os textos no
 // localStorage e as fotos no IndexedDB (que aguenta arquivos maiores).
+// Cada conta tem os seus dados separados, mesmo no mesmo aparelho.
 const CHAVES = {
   perfil: "perfil",
   semana: "semana",
@@ -7,8 +8,10 @@ const CHAVES = {
   ideias: "ideias",
   dicas: "dicas",
   dicasFeitas: "dicasFeitas",
-  codigo: "codigoAcesso",
 };
+
+let usuario = null;
+const prefixo = () => (usuario ? `u:${usuario.id}:` : "sem-conta:");
 
 const VERSAO_AUTORIZACAO = 1;
 const MAX_FOTOS_POR_ENVIO = 8;
@@ -17,7 +20,7 @@ const MAX_CARDAPIO_BYTES = 8 * 1024 * 1024;
 
 function ler(chave, padrao) {
   try {
-    const valor = localStorage.getItem(chave);
+    const valor = localStorage.getItem(prefixo() + chave);
     return valor ? JSON.parse(valor) : padrao;
   } catch {
     return padrao;
@@ -26,7 +29,7 @@ function ler(chave, padrao) {
 
 function salvar(chave, valor) {
   try {
-    localStorage.setItem(chave, JSON.stringify(valor));
+    localStorage.setItem(prefixo() + chave, JSON.stringify(valor));
   } catch {
     // Sem armazenamento (aba anônima, por exemplo): a página segue funcionando.
   }
@@ -41,15 +44,22 @@ function el(tag, classe, texto) {
   return elemento;
 }
 
-let config = { pedeCodigo: false, chaveConfigurada: true, geraImagem: false };
+let config = { pedeConvite: false, googleClientId: "", chaveConfigurada: true, geraImagem: false };
 
 // ---------- Fotos guardadas no aparelho (IndexedDB) ----------
 
 const fotosDb = (() => {
   let conexao;
+  let nomeAberto;
   function abrir() {
+    const nome = usuario ? `conteudo-instagram-${usuario.id}` : "conteudo-instagram";
+    if (nome !== nomeAberto) {
+      conexao?.then((db) => db.close()).catch(() => {});
+      conexao = null;
+      nomeAberto = nome;
+    }
     conexao ??= new Promise((resolve, reject) => {
-      const pedido = indexedDB.open("conteudo-instagram", 1);
+      const pedido = indexedDB.open(nome, 1);
       pedido.onupgradeneeded = () => pedido.result.createObjectStore("fotos", { keyPath: "id" });
       pedido.onsuccess = () => resolve(pedido.result);
       pedido.onerror = () => reject(pedido.error);
@@ -97,15 +107,12 @@ async function pedir(caminho, corpo, idCarregando, botao) {
   try {
     const resposta = await fetch(caminho, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-codigo-acesso": ler(CHAVES.codigo, ""),
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ perfil: ler(CHAVES.perfil, null), ...corpo }),
     });
     const dados = await resposta.json().catch(() => ({}));
     if (!resposta.ok) {
-      if (dados.pedeCodigo) $("#caixa-codigo").hidden = false;
+      if (dados.pedeLogin) mostrarLogin();
       throw new Error(dados.erro || "Algo deu errado. Tente de novo.");
     }
     return dados;
@@ -369,6 +376,7 @@ $("#botao-voltar").addEventListener("click", () => mostrarCadastro());
 // ---------- Telas e abas ----------
 
 function mostrarTela(nome) {
+  $("#tela-login").hidden = nome !== "login";
   $("#tela-cadastro").hidden = nome !== "cadastro";
   $("#tela-conferir").hidden = nome !== "conferir";
   $("#tela-painel").hidden = nome !== "painel";
@@ -395,7 +403,7 @@ function mostrarPainel() {
 }
 
 function abrirAba(nome) {
-  document.querySelectorAll(".aba").forEach((aba) => {
+  document.querySelectorAll(".aba[data-aba]").forEach((aba) => {
     aba.setAttribute("aria-selected", String(aba.dataset.aba === nome));
   });
   document.querySelectorAll(".painel").forEach((painel) => {
@@ -404,7 +412,7 @@ function abrirAba(nome) {
   esconderAviso();
 }
 
-document.querySelectorAll(".aba").forEach((aba) => {
+document.querySelectorAll(".aba[data-aba]").forEach((aba) => {
   aba.addEventListener("click", () => abrirAba(aba.dataset.aba));
 });
 
@@ -790,11 +798,9 @@ $("#botao-editar-perfil").addEventListener("click", mostrarCadastro);
 $("#botao-apagar").addEventListener("click", () => ($("#confirmar-apagar").hidden = false));
 $("#botao-apagar-nao").addEventListener("click", () => ($("#confirmar-apagar").hidden = true));
 $("#botao-apagar-sim").addEventListener("click", async () => {
-  const codigo = ler(CHAVES.codigo, "");
   try {
-    localStorage.clear();
+    for (const chave of Object.keys(localStorage)) if (chave.startsWith(prefixo())) localStorage.removeItem(chave);
   } catch {}
-  if (codigo) salvar(CHAVES.codigo, codigo);
   await fotosDb.apagarTodas();
   formInicio.reset();
   formPerfil.reset();
@@ -804,274 +810,157 @@ $("#botao-apagar-sim").addEventListener("click", async () => {
   mostrarCadastro();
 });
 
-// ---------- Criar com IA: arte do post ----------
+// O editor de arte (abrirCriador) fica em editor.js.
 
-const criador = {
-  item: null,
-  tipo: "feed",
-  textos: [],
-  slide: 0,
-  fotoId: null,
-  imagemFundo: null,
-  imagemFlow: null, // imagem que o dono gerou no Google Flow e enviou
-  seed: 1,
-};
+// ---------- Conta ----------
 
-const canvas = $("#arte");
-const ctx = canvas.getContext("2d");
+let modoLogin = "entrar";
+let credencialGoogle = null; // guardada quando a conta Google nova precisa do convite
 
-function carregarImagem(src) {
-  return new Promise((resolve, reject) => {
-    const imagem = new Image();
-    imagem.onload = () => resolve(imagem);
-    imagem.onerror = reject;
-    imagem.src = src;
-  });
+function mudarModoLogin(modo) {
+  modoLogin = modo;
+  document.querySelectorAll("[data-modo]").forEach((aba) => aba.setAttribute("aria-selected", String(aba.dataset.modo === modo)));
+  const criar = modo === "criar";
+  $("#campo-nome-conta").hidden = !criar;
+  $("#campo-convite").hidden = !(criar && config.pedeConvite) && !credencialGoogle;
+  $("#ajuda-senha").hidden = !criar;
+  $("#senha").autocomplete = criar ? "new-password" : "current-password";
+  $("#botao-login").textContent = criar ? "Criar conta" : "Entrar";
 }
 
-function quebrarLinhas(texto, larguraMaxima) {
-  const palavras = texto.split(/\s+/).filter(Boolean);
-  const linhas = [];
-  let atual = "";
-  for (const palavra of palavras) {
-    const tentativa = atual ? `${atual} ${palavra}` : palavra;
-    if (ctx.measureText(tentativa).width > larguraMaxima && atual) {
-      linhas.push(atual);
-      atual = palavra;
-    } else {
-      atual = tentativa;
-    }
-  }
-  if (atual) linhas.push(atual);
-  return linhas;
+document.querySelectorAll("[data-modo]").forEach((aba) => aba.addEventListener("click", () => {
+  credencialGoogle = null;
+  mudarModoLogin(aba.dataset.modo);
+}));
+
+function mostrarLogin() {
+  usuario = null;
+  $("#conta").hidden = true;
+  $("#nome-negocio").textContent = "";
+  $("#criador").close?.();
+  mudarModoLogin(modoLogin);
+  mostrarTela("login");
 }
 
-function desenharArte() {
-  const { width: L, height: A } = canvas;
-  const fundo = document.querySelector("input[name=fundo]:checked")?.value;
-  ctx.clearRect(0, 0, L, A);
-
-  if (["foto", "gerada", "flow"].includes(fundo) && criador.imagemFundo) {
-    // Preenche a arte inteira com a imagem, cortando as sobras.
-    const img = criador.imagemFundo;
-    const escala = Math.max(L / img.width, A / img.height);
-    const w = img.width * escala;
-    const h = img.height * escala;
-    ctx.drawImage(img, (L - w) / 2, (A - h) / 2, w, h);
-  } else {
-    const gradiente = ctx.createLinearGradient(0, 0, L, A);
-    gradiente.addColorStop(0, "#0E2E4F");
-    gradiente.addColorStop(1, "#0B0F14");
-    ctx.fillStyle = gradiente;
-    ctx.fillRect(0, 0, L, A);
-    ctx.fillStyle = "rgba(59, 130, 246, 0.18)";
-    ctx.beginPath();
-    ctx.arc(L * 0.85, A * 0.18, L * 0.38, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Faixa escura embaixo para o texto ficar legível sobre qualquer foto.
-  const sombra = ctx.createLinearGradient(0, A * 0.45, 0, A);
-  sombra.addColorStop(0, "rgba(11, 15, 20, 0)");
-  sombra.addColorStop(1, "rgba(11, 15, 20, 0.92)");
-  ctx.fillStyle = sombra;
-  ctx.fillRect(0, A * 0.45, L, A * 0.55);
-
-  const margem = 84;
-  const texto = $("#texto-arte").value.trim();
-  ctx.textBaseline = "alphabetic";
-  let tamanho = 92;
-  let linhas;
-  do {
-    ctx.font = `800 ${tamanho}px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
-    linhas = quebrarLinhas(texto, L - margem * 2);
-    tamanho -= 6;
-  } while (linhas.length > 4 && tamanho > 48);
-  const alturaLinha = tamanho * 1.18;
-  const rodape = A - (criador.tipo === "story" ? 260 : 120);
-  let y = rodape - linhas.length * alturaLinha;
-
-  ctx.fillStyle = "#D4AF37";
-  ctx.fillRect(margem, y - alturaLinha * 0.95, 96, 8);
-  ctx.fillStyle = "#E5E7EB";
-  for (const linha of linhas) {
-    y += alturaLinha;
-    ctx.fillText(linha, margem, y - alturaLinha * 0.2);
-  }
-
-  const perfil = ler(CHAVES.perfil, {});
-  const assinatura = (perfil.instagram || perfil.nome || "").toUpperCase();
-  ctx.font = `600 34px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
-  ctx.fillStyle = "#D4AF37";
-  if ("letterSpacing" in ctx) ctx.letterSpacing = "6px";
-  ctx.fillText(assinatura, margem, rodape + 70);
-  if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
-}
-
-async function usarFoto(id) {
-  criador.fotoId = id;
-  const guardada = id ? await fotosDb.pegar(id) : null;
-  criador.imagemFundo = guardada ? await carregarImagem(guardada.dataUrl) : null;
-  document.querySelectorAll("#escolha-foto .miniatura").forEach((m) => {
-    m.setAttribute("aria-pressed", String(m.dataset.id === id));
-  });
-  desenharArte();
-}
-
-async function gerarImagem() {
-  const botaoOutra = $("#botao-outra-imagem");
-  $("#carregando-imagem").hidden = false;
-  botaoOutra.disabled = true;
-  try {
-    const resposta = await fetch("/api/imagem", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-codigo-acesso": ler(CHAVES.codigo, "") },
-      body: JSON.stringify({ prompt: criador.item.prompt_imagem, formato: criador.tipo, seed: criador.seed }),
-    });
-    if (!resposta.ok) {
-      const dados = await resposta.json().catch(() => ({}));
-      throw new Error(dados.erro || "Não consegui gerar a imagem agora.");
-    }
-    const url = URL.createObjectURL(await resposta.blob());
-    criador.imagemFundo = await carregarImagem(url);
-    desenharArte();
-  } catch (erro) {
-    mostrarErroNaArte(erro.message);
-  } finally {
-    $("#carregando-imagem").hidden = true;
-    botaoOutra.disabled = false;
-  }
-}
-
-// Mostra o erro dentro da janela da arte, onde o dono está olhando.
-function mostrarErroNaArte(mensagem) {
-  const nota = $("#criador .nota");
-  nota.textContent = mensagem;
-  nota.classList.add("erro-texto");
-}
-
-async function trocarFundo() {
-  const fundo = document.querySelector("input[name=fundo]:checked")?.value;
-  $("#escolha-foto").hidden = fundo !== "foto";
-  $("#botao-outra-imagem").hidden = fundo !== "gerada";
-  $("#painel-flow").hidden = fundo !== "flow";
-  if (fundo === "foto") await usarFoto(criador.fotoId);
-  else if (fundo === "gerada") await gerarImagem();
-  else if (fundo === "flow") {
-    criador.imagemFundo = criador.imagemFlow;
-    desenharArte();
-  }
-  else {
-    criador.imagemFundo = null;
-    desenharArte();
-  }
-}
-
-function atualizarSlide() {
-  const total = criador.textos.length;
-  $("#navegar-slides").hidden = total <= 1;
-  $("#slide-atual").textContent = `Slide ${criador.slide + 1} de ${total}`;
-  $("#texto-arte").value = criador.textos[criador.slide] || "";
-  desenharArte();
-}
-
-async function abrirCriador(item, tipo) {
-  criador.item = item;
-  criador.tipo = tipo;
-  criador.slide = 0;
-  criador.imagemFlow = null;
-  criador.seed = Math.floor(Math.random() * 1e6);
-  criador.textos = item.slides?.length ? [...item.slides] : [item.titulo_arte || item.titulo || item.tema || ""];
-  canvas.width = 1080;
-  canvas.height = tipo === "story" ? 1920 : 1350;
-  $("#criador-titulo").textContent = tipo === "story" ? "Criar arte do story" : "Criar arte do post";
-  const nota = $("#criador .nota");
-  nota.textContent = "Depois de baixar, abra o Instagram, escolha a imagem e cole a legenda.";
-  nota.classList.remove("erro-texto");
-
-  const perfil = ler(CHAVES.perfil, {});
-  const fotos = perfil.fotos || [];
-  const escolha = $("#escolha-foto");
-  escolha.replaceChildren();
-  for (const foto of fotos) {
-    const guardada = await fotosDb.pegar(foto.id);
-    if (!guardada) continue;
-    const opcao = el("button", "miniatura");
-    opcao.type = "button";
-    opcao.dataset.id = foto.id;
-    opcao.title = foto.descricao;
-    opcao.setAttribute("aria-label", foto.descricao);
-    const imagem = el("img");
-    imagem.src = guardada.dataUrl;
-    imagem.alt = "";
-    opcao.append(imagem);
-    opcao.addEventListener("click", () => usarFoto(foto.id));
-    escolha.append(opcao);
-  }
-  const temFotos = escolha.children.length > 0;
-  $("#chip-foto").hidden = !temFotos;
-  $("#chip-gerada").hidden = !config.geraImagem;
-
-  const sugerida = fotos.some((f) => f.id === item.foto_sugerida) ? item.foto_sugerida : fotos[0]?.id;
-  criador.fotoId = temFotos ? sugerida : null;
-  const fundoInicial = temFotos ? "foto" : "cores";
-  document.querySelector(`input[name=fundo][value=${fundoInicial}]`).checked = true;
-
-  $("#criador").showModal();
-  atualizarSlide();
-  await trocarFundo();
-}
-
-document.querySelectorAll("input[name=fundo]").forEach((opcao) => opcao.addEventListener("change", trocarFundo));
-$("#texto-arte").addEventListener("input", () => {
-  criador.textos[criador.slide] = $("#texto-arte").value;
-  desenharArte();
-});
-$("#slide-anterior").addEventListener("click", () => {
-  criador.slide = (criador.slide - 1 + criador.textos.length) % criador.textos.length;
-  atualizarSlide();
-});
-$("#slide-proximo").addEventListener("click", () => {
-  criador.slide = (criador.slide + 1) % criador.textos.length;
-  atualizarSlide();
-});
-$("#botao-outra-imagem").addEventListener("click", () => {
-  criador.seed = Math.floor(Math.random() * 1e6);
-  gerarImagem();
-});
-// Google Flow: não tem API, então o dono gera lá com a conta dele e envia o arquivo.
-$("#botao-copiar-prompt").addEventListener("click", (e) => copiar(criador.item.prompt_imagem || "", e.currentTarget));
-$("#arquivo-flow").addEventListener("change", async (evento) => {
-  const arquivo = evento.target.files[0];
-  evento.target.value = "";
-  if (!arquivo) return;
-  criador.imagemFlow = await carregarImagem(await reduzirImagem(arquivo, 2000, 0.92));
-  criador.imagemFundo = criador.imagemFlow;
-  desenharArte();
-});
-$("#criador-fechar").addEventListener("click", () => $("#criador").close());
-$("#botao-baixar").addEventListener("click", () => {
-  canvas.toBlob(
-    (blob) => {
-      const link = document.createElement("a");
-      const nome = (criador.item.titulo || criador.item.tema || "arte").toLowerCase().replace(/[^a-z0-9]+/gi, "-");
-      link.href = URL.createObjectURL(blob);
-      link.download = `${nome}${criador.textos.length > 1 ? `-slide-${criador.slide + 1}` : ""}.jpg`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(link.href), 5000);
-    },
-    "image/jpeg",
-    0.92,
-  );
-});
-
-// ---------- Código de acesso ----------
-
-$("#form-codigo").addEventListener("submit", (evento) => {
-  evento.preventDefault();
-  salvar(CHAVES.codigo, $("#codigo").value.trim());
-  $("#caixa-codigo").hidden = true;
+async function entrar(caminho, corpo, botao) {
   esconderAviso();
+  botao.disabled = true;
+  try {
+    const resposta = await fetch(caminho, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(corpo),
+    });
+    const dados = await resposta.json().catch(() => ({}));
+    if (!resposta.ok) {
+      if (dados.pedeConvite) $("#campo-convite").hidden = false;
+      throw new Error(dados.erro || "Não consegui entrar. Tente de novo.");
+    }
+    credencialGoogle = null;
+    modoLogin = "entrar";
+    $("#form-login").reset();
+    abrirConta(dados.usuario);
+  } catch (erro) {
+    mostrarAviso(erro instanceof TypeError ? "Não consegui falar com o servidor. Confira a internet e tente de novo." : erro.message);
+  } finally {
+    botao.disabled = false;
+  }
+}
+
+$("#form-login").addEventListener("submit", (evento) => {
+  evento.preventDefault();
+  const dados = Object.fromEntries(new FormData(evento.target).entries());
+  if (credencialGoogle) {
+    entrar("/api/entrar-google", { credencial: credencialGoogle, convite: dados.convite }, $("#botao-login"));
+  } else {
+    entrar(modoLogin === "criar" ? "/api/conta" : "/api/entrar", dados, $("#botao-login"));
+  }
+});
+
+// Botão oficial "Entrar com o Google" (Google Identity Services).
+function prepararGoogle() {
+  if (!config.googleClientId) return;
+  const script = document.createElement("script");
+  script.src = "https://accounts.google.com/gsi/client";
+  script.async = true;
+  script.onload = () => {
+    google.accounts.id.initialize({
+      client_id: config.googleClientId,
+      callback: ({ credential }) => {
+        credencialGoogle = credential;
+        entrar("/api/entrar-google", { credencial: credential, convite: $("#convite").value }, $("#botao-login")).then(() => {
+          // Conta nova que precisa de convite: o formulário passa a enviar só o convite.
+          if (credencialGoogle && !$("#campo-convite").hidden) {
+            $("#campo-email").hidden = $("#campo-senha").hidden = $("#campo-nome-conta").hidden = true;
+            $("#email").required = $("#senha").required = false;
+            $("#botao-login").textContent = "Continuar com o Google";
+          }
+        });
+      },
+    });
+    google.accounts.id.renderButton($("#botao-google"), { theme: "filled_black", size: "large", text: "continue_with", locale: "pt-BR", width: 300 });
+    $("#botao-google").hidden = false;
+    $("#separador-google").hidden = false;
+  };
+  document.head.append(script);
+}
+
+// Antes do login existir, os dados ficavam sem dono no aparelho. A primeira
+// conta que entrar aqui fica com eles, para ninguém perder o cadastro.
+async function trazerDadosAntigos() {
+  try {
+    if (localStorage.getItem(prefixo() + CHAVES.perfil) || !localStorage.getItem(CHAVES.perfil)) return;
+    for (const chave of Object.values(CHAVES)) {
+      const valor = localStorage.getItem(chave);
+      if (valor !== null) localStorage.setItem(prefixo() + chave, valor);
+      localStorage.removeItem(chave);
+    }
+    localStorage.removeItem("codigoAcesso");
+  } catch {
+    return;
+  }
+  const perfil = ler(CHAVES.perfil, {});
+  const antigas = await new Promise((resolve) => {
+    const pedido = indexedDB.open("conteudo-instagram", 1);
+    pedido.onupgradeneeded = () => pedido.result.createObjectStore("fotos", { keyPath: "id" });
+    pedido.onerror = () => resolve([]);
+    pedido.onsuccess = () => {
+      const db = pedido.result;
+      const leitura = db.transaction("fotos").objectStore("fotos").getAll();
+      leitura.onsuccess = () => {
+        db.close();
+        resolve(leitura.result);
+      };
+      leitura.onerror = () => resolve([]);
+    };
+  });
+  for (const foto of antigas) {
+    if ((perfil.fotos || []).some((f) => f.id === foto.id)) await fotosDb.guardar(foto);
+  }
+  indexedDB.deleteDatabase("conteudo-instagram");
+}
+
+let ultimaConta = null;
+
+async function abrirConta(dados) {
+  // A sessão venceu e entrou outra pessoa: recarrega para limpar a tela.
+  if (ultimaConta && ultimaConta !== dados.id) return location.reload();
+  ultimaConta = dados.id;
+  usuario = dados;
+  $("#conta-email").textContent = usuario.email;
+  $("#conta").hidden = false;
+  await trazerDadosAntigos();
+  const perfil = ler(CHAVES.perfil, null);
+  // Quem veio da primeira versão ainda não deu a autorização: passa pelo cadastro.
+  if (perfil?.produtos && perfil.autorizacao?.aceita) mostrarPainel();
+  else mostrarCadastro();
+}
+
+$("#botao-sair").addEventListener("click", async () => {
+  await fetch("/api/sair", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).catch(() => {});
+  window.google?.accounts?.id?.disableAutoSelect?.();
+  // Recarrega para não sobrar nada da conta anterior na tela.
+  location.reload();
 });
 
 // ---------- Início ----------
@@ -1085,7 +974,6 @@ async function iniciar() {
   try {
     config = await (await fetch("/api/config")).json();
   } catch {}
-  if (config.pedeCodigo && !ler(CHAVES.codigo, "")) $("#caixa-codigo").hidden = false;
   if (!config.chaveConfigurada) {
     mostrarAviso("O site ainda não está configurado: falta a chave da API do Claude. Veja o README.", "atencao");
   }
@@ -1093,10 +981,12 @@ async function iniciar() {
   try {
     localStorage.removeItem("calendario");
   } catch {}
-  const perfil = ler(CHAVES.perfil, null);
-  // Quem veio da primeira versão ainda não deu a autorização: passa pelo cadastro.
-  if (perfil?.produtos && perfil.autorizacao?.aceita) mostrarPainel();
-  else mostrarCadastro();
+  prepararGoogle();
+  try {
+    const resposta = await fetch("/api/eu");
+    if (resposta.ok) return abrirConta((await resposta.json()).usuario);
+  } catch {}
+  mostrarLogin();
 }
 
 iniciar();
